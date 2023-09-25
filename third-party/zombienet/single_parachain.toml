@@ -4,9 +4,9 @@ timeout = 1000
 # Used to start 4 validator nodes and 2 collator nodes for a single parachain.
 
 [relaychain]
-default_command = "../polkadot/target/release/polkadot"
+default_command = "../polkadot-archived/target/release/polkadot"
 default_args = [ "-l=parachain=debug,xcm=trace" ]
-chain = "rococo-local"
+chain = "westend-local"
 
   [[relaychain.nodes]]
   name = "alice"

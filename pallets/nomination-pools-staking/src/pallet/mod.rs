@@ -35,8 +35,13 @@ const _NOMINATION_POOL_STAKING_ID: LockIdentifier = *b"np_stake";
 #[allow(clippy::module_inception)]
 pub mod pallet {
     use super::*;
-    use sp_std::vec::Vec;
-    use xcm::v3::{Instruction, Junctions::Here, MultiLocation, Xcm};
+    use sp_std::vec;
+    use xcm::opaque::lts::{OriginKind::SovereignAccount, WeightLimit};
+    use xcm::v3::{
+        Instruction::{BuyExecution, Transact, WithdrawAsset},
+        Junctions::Here,
+        MultiLocation, Xcm,
+    };
 
     /// The balance type of this pallet.
     pub type BalanceOf<T> =
@@ -236,16 +241,6 @@ pub mod pallet {
 
             let staker: <T as frame_system::Config>::AccountId = ensure_signed(origin)?;
 
-            let location: MultiLocation = MultiLocation {
-                parents: 1,
-                interior: Here,
-            };
-
-            let local: MultiLocation = MultiLocation {
-                parents: 0,
-                interior: Here,
-            };
-
             let staker_multi_address = T::Lookup::unlookup(staker.clone());
 
             let create_nomination_pool: NominationPoolsCall<T> = NominationPoolsCall::Create(
@@ -259,25 +254,23 @@ pub mod pallet {
 
             Self::deposit_event(Event::<T>::DebugNominationPool(encoded_call.into()));
 
-            let mut calls = Vec::new();
-
-            calls.push(Instruction::WithdrawAsset(
-                (local, 10_000_000_000u64).into(),
-            ));
-            calls.push(Instruction::BuyExecution {
-                fees: (local, 10_000_000_000u64).into(),
-                weight_limit: xcm::v3::WeightLimit::Unlimited,
-            });
-            calls.push(Instruction::Transact {
-                origin_kind: xcm::v3::OriginKind::Native,
-                require_weight_at_most: Weight::from_parts(10_000_000_000u64, 1024 * 1024),
-                call: create_nomination_pool.encode().into(),
-            });
             // TODO add refund surplus on error. https://paritytech.github.io/xcm-docs/journey/fees/index.html#refundsurplus
 
-            let messages = Xcm(calls);
+            let withdraw = 10_000_000_000u64;
+            let messages = Xcm(vec![
+                WithdrawAsset((MultiLocation::parent(), withdraw).into()),
+                BuyExecution {
+                    fees: (MultiLocation::parent(), withdraw).into(),
+                    weight_limit: WeightLimit::Unlimited,
+                },
+                Transact {
+                    origin_kind: SovereignAccount,
+                    require_weight_at_most: Weight::from_parts(10_000_000_000u64, 1024 * 1024),
+                    call: create_nomination_pool.encode().into(),
+                },
+            ]);
 
-            match pallet_xcm::Pallet::<T>::send_xcm(Here, location, messages) {
+            match pallet_xcm::Pallet::<T>::send_xcm(Here, MultiLocation::parent(), messages) {
                 Ok(_) => {
                     Self::deposit_event(Event::<T>::BondAndStake(staker, contract_id));
                     Ok(().into())
