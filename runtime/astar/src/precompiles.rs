@@ -19,9 +19,11 @@
 //! The Astar Network EVM precompiles. This can be compiled with ``#[no_std]`, ready for Wasm.
 
 use pallet_evm::{
-    ExitRevert, Precompile, PrecompileFailure, PrecompileHandle, PrecompileResult, PrecompileSet,
+    ExitRevert, IsPrecompileResult, Precompile, PrecompileFailure, PrecompileHandle,
+    PrecompileResult, PrecompileSet,
 };
 use pallet_evm_precompile_assets_erc20::{AddressToAssetId, Erc20AssetsPrecompileSet};
+use pallet_evm_precompile_batch::BatchPrecompile;
 use pallet_evm_precompile_blake2::Blake2F;
 use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
 use pallet_evm_precompile_dapps_staking::DappsStakingWrapper;
@@ -55,9 +57,11 @@ impl<R, C> AstarNetworkPrecompiles<R, C> {
     /// Return all addresses that contain precompiles. This can be used to populate dummy code
     /// under the precompile.
     pub fn used_addresses() -> impl Iterator<Item = H160> {
-        sp_std::vec![1, 2, 3, 4, 5, 6, 7, 8, 1024, 1025, 1026, 1027, 20481, 20482, 20483, 20484]
-            .into_iter()
-            .map(hash)
+        sp_std::vec![
+            1, 2, 3, 4, 5, 6, 7, 8, 1024, 1025, 1026, 1027, 20481, 20482, 20483, 20484, 20486
+        ]
+        .into_iter()
+        .map(hash)
     }
 }
 
@@ -68,6 +72,7 @@ impl<R, C> PrecompileSet for AstarNetworkPrecompiles<R, C>
 where
     Erc20AssetsPrecompileSet<R>: PrecompileSet,
     DappsStakingWrapper<R>: Precompile,
+    BatchPrecompile<R>: Precompile,
     XcmPrecompile<R, C>: Precompile,
     Dispatch<R>: Precompile,
     R: pallet_evm::Config
@@ -78,11 +83,15 @@ where
 {
     fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
         let address = handle.code_address();
-        if self.is_precompile(address) && address > hash(9) && handle.context().address != address {
-            return Some(Err(PrecompileFailure::Revert {
-                exit_status: ExitRevert::Reverted,
-                output: b"cannot be called with DELEGATECALL or CALLCODE".to_vec(),
-            }));
+        if let IsPrecompileResult::Answer { is_precompile, .. } =
+            self.is_precompile(address, u64::MAX)
+        {
+            if is_precompile && address > hash(9) && handle.context().address != address {
+                return Some(Err(PrecompileFailure::Revert {
+                    exit_status: ExitRevert::Reverted,
+                    output: b"cannot be called with DELEGATECALL or CALLCODE".to_vec(),
+                }));
+            }
         }
         match address {
             // Ethereum precompiles :
@@ -109,6 +118,8 @@ where
             a if a == hash(20483) => Some(SubstrateEcdsaPrecompile::<R>::execute(handle)),
             // Xcm 0x5004
             a if a == hash(20484) => Some(XcmPrecompile::<R, C>::execute(handle)),
+            // Batch 0x5006
+            a if a == hash(20486) => Some(BatchPrecompile::<R>::execute(handle)),
             // If the address matches asset prefix, the we route through the asset precompile set
             a if &a.to_fixed_bytes()[0..4] == ASSET_PRECOMPILE_ADDRESS_PREFIX => {
                 Erc20AssetsPrecompileSet::<R>::new().execute(handle)
@@ -118,9 +129,17 @@ where
         }
     }
 
-    fn is_precompile(&self, address: H160) -> bool {
-        Self::used_addresses().any(|x| x == address)
-            || Erc20AssetsPrecompileSet::<R>::new().is_precompile(address)
+    fn is_precompile(&self, address: H160, gas: u64) -> IsPrecompileResult {
+        let assets_precompile =
+            match Erc20AssetsPrecompileSet::<R>::new().is_precompile(address, gas) {
+                IsPrecompileResult::Answer { is_precompile, .. } => is_precompile,
+                _ => false,
+            };
+
+        IsPrecompileResult::Answer {
+            is_precompile: assets_precompile || Self::used_addresses().any(|x| x == address),
+            extra_cost: 0,
+        }
     }
 }
 

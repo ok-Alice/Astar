@@ -1,0 +1,68 @@
+[package]
+name = "astar-primitives"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+# third-party dependencies
+impl-trait-for-tuples = { workspace = true }
+log = { workspace = true }
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+
+# Ethereum/Frontier dependencies
+ethereum = { workspace = true, features = ["with-codec"] }
+ethereum-types = { workspace = true }
+fp-evm = { workspace = true }
+
+# Substrate dependencies
+frame-support = { workspace = true }
+pallet-assets = { workspace = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+# XCM dependencies
+xcm = { workspace = true }
+xcm-builder = { workspace = true }
+xcm-executor = { workspace = true }
+
+# ORML dependencies
+orml-traits = { workspace = true }
+
+# Frontier dependencies
+pallet-evm = { workspace = true }
+
+# Astar pallets & dependencies
+pallet-evm-precompile-assets-erc20 = { workspace = true }
+pallet-xc-asset-config = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"log/std",
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"ethereum-types/std",
+	"ethereum/std",
+	"fp-evm/std",
+	"frame-support/std",
+	"sp-std/std",
+	"sp-runtime/std",
+	"sp-core/std",
+	"sp-io/std",
+	"xcm/std",
+	"xcm-builder/std",
+	"xcm-executor/std",
+	"orml-traits/std",
+	"pallet-xc-asset-config/std",
+	"fp-evm/std",
+	"pallet-assets/std",
+	"pallet-evm/std",
+	"pallet-evm-precompile-assets-erc20/std",
+]
+runtime-benchmarks = ["xcm-builder/runtime-benchmarks", "pallet-assets/runtime-benchmarks"]

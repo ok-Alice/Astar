@@ -20,7 +20,12 @@
 
 use super::*;
 
-use frame_support::{construct_runtime, parameter_types, traits::Everything, weights::Weight};
+use fp_evm::IsPrecompileResult;
+use frame_support::{
+    construct_runtime, ensure, parameter_types,
+    traits::{ConstU32, ConstU64, Everything},
+    weights::Weight,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
@@ -32,6 +37,11 @@ use sp_core::{H160, H256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+};
+use sp_std::cell::RefCell;
+
+use astar_primitives::xvm::{
+    CallFailure, CallOutput, CallResult, FailureError::*, FailureRevert::*,
 };
 
 pub type AccountId = TestAccount;
@@ -149,18 +159,23 @@ pub struct TestPrecompileSet<R>(PhantomData<R>);
 
 impl<R> PrecompileSet for TestPrecompileSet<R>
 where
-    R: pallet_evm::Config + pallet_xvm::Config,
-    XvmPrecompile<R>: Precompile,
+    R: pallet_evm::Config,
+    XvmPrecompile<R, MockXvmWithArgsCheck>: Precompile,
 {
     fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
         match handle.code_address() {
-            a if a == PRECOMPILE_ADDRESS => Some(XvmPrecompile::<R>::execute(handle)),
+            a if a == PRECOMPILE_ADDRESS => {
+                Some(XvmPrecompile::<R, MockXvmWithArgsCheck>::execute(handle))
+            }
             _ => None,
         }
     }
 
-    fn is_precompile(&self, address: H160) -> bool {
-        address == PRECOMPILE_ADDRESS
+    fn is_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
+        IsPrecompileResult::Answer {
+            is_precompile: address == PRECOMPILE_ADDRESS,
+            extra_cost: 0,
+        }
     }
 }
 
@@ -176,7 +191,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 0;
+    pub const ExistentialDeposit: u128 = 1;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -189,12 +204,16 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
     pub const PrecompilesValue: TestPrecompileSet<Runtime> =
         TestPrecompileSet(PhantomData);
-    pub WeightPerGas: Weight = Weight::from_ref_time(1);
+    pub WeightPerGas: Weight = Weight::from_parts(1, 0);
 }
 
 impl pallet_evm::Config for Runtime {
@@ -209,6 +228,7 @@ impl pallet_evm::Config for Runtime {
     type Runner = pallet_evm::runner::stack::Runner<Self>;
     type PrecompilesType = TestPrecompileSet<Self>;
     type PrecompilesValue = PrecompilesValue;
+    type Timestamp = Timestamp;
     type ChainId = ();
     type OnChargeTransaction = ();
     type BlockGasLimit = ();
@@ -216,12 +236,56 @@ impl pallet_evm::Config for Runtime {
     type FindAuthor = ();
     type OnCreate = ();
     type WeightInfo = ();
+    type GasLimitPovSizeRatio = ConstU64<4>;
 }
 
-impl pallet_xvm::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type SyncVM = ();
-    type AsyncVM = ();
+thread_local! {
+    static WEIGHT_LIMIT: RefCell<Weight> = RefCell::new(Weight::zero());
+}
+
+pub(crate) struct WeightLimitCalledWith;
+impl WeightLimitCalledWith {
+    pub(crate) fn get() -> Weight {
+        WEIGHT_LIMIT.with(|gas_limit| *gas_limit.borrow())
+    }
+
+    pub(crate) fn set(value: Weight) {
+        WEIGHT_LIMIT.with(|gas_limit| *gas_limit.borrow_mut() = value)
+    }
+
+    pub(crate) fn reset() {
+        Self::set(Weight::zero());
+    }
+}
+
+struct MockXvmWithArgsCheck;
+impl XvmCall<AccountId> for MockXvmWithArgsCheck {
+    fn call(
+        context: Context,
+        vm_id: VmId,
+        _source: AccountId,
+        target: Vec<u8>,
+        input: Vec<u8>,
+        _value: Balance,
+        _storage_deposit_limit: Option<Balance>,
+    ) -> CallResult {
+        ensure!(
+            vm_id != VmId::Evm,
+            CallFailure::error(SameVmCallDenied, Weight::zero())
+        );
+        ensure!(
+            target.len() == 20,
+            CallFailure::revert(InvalidTarget, Weight::zero()),
+        );
+        ensure!(
+            input.len() <= 1024,
+            CallFailure::revert(InputTooLarge, Weight::zero()),
+        );
+
+        WeightLimitCalledWith::set(context.weight_limit);
+
+        Ok(CallOutput::new(vec![], Weight::zero()))
+    }
 }
 
 // Configure a mock runtime to test the pallet.
@@ -235,7 +299,6 @@ construct_runtime!(
         Balances: pallet_balances,
         Evm: pallet_evm,
         Timestamp: pallet_timestamp,
-        Xvm: pallet_xvm,
     }
 );
 
@@ -247,6 +310,8 @@ impl ExtBuilder {
         let t = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
             .expect("Frame system builds valid default genesis config");
+
+        WeightLimitCalledWith::reset();
 
         let mut ext = sp_io::TestExternalities::new(t);
         ext.execute_with(|| System::set_block_number(1));

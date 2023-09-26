@@ -20,7 +20,6 @@ use super::{
     AccountId, AllPalletsWithSystem, AssetId, Assets, AstarAssetLocationIdConverter, Balance,
     Balances, DealWithFees, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall,
     RuntimeEvent, RuntimeOrigin, TreasuryAccountId, WeightToFee, XcAssetConfig, XcmpQueue,
-    MAXIMUM_BLOCK_WEIGHT,
 };
 use frame_support::{
     match_types, parameter_types,
@@ -28,6 +27,7 @@ use frame_support::{
     weights::Weight,
 };
 use frame_system::EnsureRoot;
+use sp_runtime::traits::Convert;
 
 // Polkadot imports
 use xcm::latest::prelude::*;
@@ -40,12 +40,18 @@ use xcm_builder::{
     SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{
-    traits::{JustTry, WithOriginFilter},
+    traits::{Convert as XcmConvert, JustTry, WithOriginFilter},
     XcmExecutor,
 };
 
+// ORML imports
+use orml_xcm_support::DisabledParachainFee;
+
 // Astar imports
-use xcm_primitives::{FixedRateOfForeignAsset, ReserveAssetFilter, XcmFungibleFeeHandler};
+use astar_primitives::xcm::{
+    AbsoluteAndRelativeReserveProvider, AccountIdToMultiLocation, FixedRateOfForeignAsset,
+    ReserveAssetFilter, XcmFungibleFeeHandler,
+};
 
 parameter_types! {
     pub RelayNetwork: Option<NetworkId> = Some(NetworkId::Polkadot);
@@ -129,9 +135,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
     // One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-    // The default POV size used by Polkadot/Kusama was 64 kB but that has been updated here: https://github.com/paritytech/polkadot/pull/7081
-    // We should properly benchmark instructions and get rid of fixed weights.
-    pub UnitWeightCost: Weight = Weight::from_parts(1_000_000_000, 1024);
+    // For the PoV size, we estimate 64 kB per instruction - which will is once again very conservative.
+    pub UnitWeightCost: Weight = Weight::from_parts(1_000_000_000, 64 * 1024);
     pub const MaxInstructions: u32 = 100;
 }
 
@@ -243,7 +248,7 @@ impl xcm_executor::Config for XcmConfig {
     type IsTeleporter = ();
     type UniversalLocation = UniversalLocation;
     type Barrier = XcmBarrier;
-    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+    type Weigher = Weigher;
     type Trader = (
         UsingComponents<WeightToFee, AstarLocation, AccountId, Balances, DealWithFees>,
         FixedRateOfForeignAsset<XcAssetConfig, AstarXcmFungibleFeeHandler>,
@@ -264,10 +269,6 @@ impl xcm_executor::Config for XcmConfig {
     type SafeCallFilter = SafeCallFilter;
 }
 
-parameter_types! {
-    pub const MaxDownwardMessageWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(10);
-}
-
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
@@ -285,6 +286,8 @@ parameter_types! {
     pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
 
+pub type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+
 impl pallet_xcm::Config for Runtime {
     const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
 
@@ -296,7 +299,7 @@ impl pallet_xcm::Config for Runtime {
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type XcmTeleportFilter = Nothing;
     type XcmReserveTransferFilter = Everything;
-    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+    type Weigher = Weigher;
     type UniversalLocation = UniversalLocation;
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
@@ -310,6 +313,7 @@ impl pallet_xcm::Config for Runtime {
     type WeightInfo = pallet_xcm::weights::SubstrateWeight<Runtime>;
     #[cfg(feature = "runtime-benchmarks")]
     type ReachableDest = ReachableDest;
+    type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -333,4 +337,44 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+}
+
+parameter_types! {
+    /// The absolute location in perspective of the whole network.
+    pub AstarLocationAbsolute: MultiLocation = MultiLocation {
+        parents: 1,
+        interior: X1(
+            Parachain(ParachainInfo::parachain_id().into())
+        )
+    };
+    /// Max asset types for one cross-chain transfer. `2` covers all current use cases.
+    /// Can be updated with extra test cases in the future if needed.
+    pub const MaxAssetsForTransfer: usize = 2;
+}
+
+/// Convert `AssetId` to optional `MultiLocation`. The impl is a wrapper
+/// on `ShidenAssetLocationIdConverter`.
+pub struct AssetIdConvert;
+impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
+    fn convert(asset_id: AssetId) -> Option<MultiLocation> {
+        AstarAssetLocationIdConverter::reverse_ref(&asset_id).ok()
+    }
+}
+
+impl orml_xtokens::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Balance = Balance;
+    type CurrencyId = AssetId;
+    type CurrencyIdConvert = AssetIdConvert;
+    type AccountIdToMultiLocation = AccountIdToMultiLocation;
+    type SelfLocation = AstarLocation;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type Weigher = Weigher;
+    type BaseXcmWeight = UnitWeightCost;
+    type UniversalLocation = UniversalLocation;
+    type MaxAssetsForTransfer = MaxAssetsForTransfer;
+    // Default impl. Refer to `orml-xtokens` docs for more details.
+    type MinXcmFee = DisabledParachainFee;
+    type MultiLocationsFilter = Everything;
+    type ReserveProvider = AbsoluteAndRelativeReserveProvider<AstarLocationAbsolute>;
 }

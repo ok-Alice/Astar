@@ -1,6 +1,6 @@
 [package]
 name = "local-runtime"
-version = "5.11.0"
+version = "5.18.1"
 build = "build.rs"
 authors.workspace = true
 edition.workspace = true
@@ -26,7 +26,9 @@ pallet-contracts = { workspace = true }
 pallet-contracts-primitives = { workspace = true }
 pallet-democracy = { workspace = true }
 pallet-ethereum = { workspace = true }
+pallet-ethereum-checked = { workspace = true }
 pallet-evm = { workspace = true }
+pallet-evm-precompile-batch = { workspace = true }
 pallet-evm-precompile-blake2 = { workspace = true }
 pallet-evm-precompile-bn128 = { workspace = true }
 pallet-evm-precompile-dispatch = { workspace = true }
@@ -50,6 +52,7 @@ sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
 sp-inherents = { workspace = true }
+sp-io = { workspace = true }
 sp-offchain = { workspace = true }
 sp-runtime = { workspace = true }
 sp-session = { workspace = true }
@@ -62,17 +65,17 @@ frame-system-rpc-runtime-api = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 
 # Astar pallets
+astar-primitives = { workspace = true }
 pallet-block-reward = { workspace = true }
 pallet-chain-extension-dapps-staking = { workspace = true }
 pallet-chain-extension-xvm = { workspace = true }
-pallet-custom-signatures = { workspace = true }
 pallet-dapps-staking = { workspace = true }
 pallet-evm-precompile-assets-erc20 = { workspace = true }
 pallet-evm-precompile-dapps-staking = { workspace = true }
 pallet-evm-precompile-sr25519 = { workspace = true }
 pallet-evm-precompile-substrate-ecdsa = { workspace = true }
 pallet-evm-precompile-xvm = { workspace = true }
-pallet-xvm = { workspace = true, features = ["evm", "wasm"] }
+pallet-xvm = { workspace = true }
 
 # Moonbeam tracing
 moonbeam-evm-tracer = { workspace = true, optional = true }
@@ -111,7 +114,6 @@ std = [
 	"pallet-contracts-primitives/std",
 	"pallet-chain-extension-dapps-staking/std",
 	"pallet-chain-extension-xvm/std",
-	"pallet-custom-signatures/std",
 	"pallet-dapps-staking/std",
 	"pallet-base-fee/std",
 	"pallet-ethereum/std",
@@ -124,6 +126,7 @@ std = [
 	"pallet-evm-precompile-modexp/std",
 	"pallet-evm-precompile-sha3fips/std",
 	"pallet-evm-precompile-dapps-staking/std",
+	"pallet-evm-precompile-batch/std",
 	"pallet-evm-precompile-sr25519/std",
 	"pallet-evm-precompile-substrate-ecdsa/std",
 	"pallet-evm-precompile-xvm/std",
@@ -148,6 +151,7 @@ std = [
 	"sp-std/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
+	"sp-io/std",
 	"frame-benchmarking/std",
 	"frame-try-runtime/std",
 	"pallet-collective/std",
@@ -155,11 +159,13 @@ std = [
 	"pallet-scheduler/std",
 	"pallet-treasury/std",
 	"pallet-xvm/std",
+	"pallet-ethereum-checked/std",
 	"moonbeam-evm-tracer/std",
 	"moonbeam-rpc-primitives-debug/std",
 	"moonbeam-rpc-primitives-txpool/std",
 	"substrate-wasm-builder",
 	"pallet-chain-extension-assets/std",
+	"astar-primitives/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
@@ -174,6 +180,9 @@ runtime-benchmarks = [
 	"pallet-ethereum/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"pallet-preimage/runtime-benchmarks",
+	"pallet-ethereum-checked/runtime-benchmarks",
+	"astar-primitives/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
 ]
 try-runtime = [
 	"fp-self-contained/try-runtime",
@@ -186,7 +195,6 @@ try-runtime = [
 	"pallet-balances/try-runtime",
 	"pallet-block-reward/try-runtime",
 	"pallet-contracts/try-runtime",
-	"pallet-custom-signatures/try-runtime",
 	"pallet-dapps-staking/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-insecure-randomness-collective-flip/try-runtime",
@@ -206,6 +214,7 @@ try-runtime = [
 	"pallet-preimage/try-runtime",
 	"pallet-base-fee/try-runtime",
 	"pallet-evm/try-runtime",
+	"pallet-ethereum-checked/try-runtime",
 ]
 evm-tracing = [
 	"moonbeam-evm-tracer",

@@ -20,7 +20,6 @@ use super::{
     AccountId, AllPalletsWithSystem, AssetId, Assets, Balance, Balances, DealWithFees,
     ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
     ShibuyaAssetLocationIdConverter, TreasuryAccountId, WeightToFee, XcAssetConfig, XcmpQueue,
-    MAXIMUM_BLOCK_WEIGHT,
 };
 use frame_support::{
     match_types, parameter_types,
@@ -28,13 +27,12 @@ use frame_support::{
     weights::Weight,
 };
 use frame_system::EnsureRoot;
-use sp_runtime::traits::{Convert, Get};
-use sp_std::marker::PhantomData;
+use sp_runtime::traits::Convert;
 
 // Polkadot imports
 use xcm::latest::prelude::*;
 use xcm_builder::{
-    Account32Hash, AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
+    AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
     AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, CurrencyAdapter,
     EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, IsConcrete, NoChecking,
     ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
@@ -47,11 +45,14 @@ use xcm_executor::{
 };
 
 // ORML imports
-use orml_traits::location::{RelativeReserveProvider, Reserve};
 use orml_xcm_support::DisabledParachainFee;
 
 // Astar imports
-use xcm_primitives::{FixedRateOfForeignAsset, ReserveAssetFilter, XcmFungibleFeeHandler};
+use astar_primitives::xcm::{
+    AbsoluteAndRelativeReserveProvider, AccountIdToMultiLocation, DescribeAllTerminal,
+    DescribeFamily, FixedRateOfForeignAsset, HashedDescription, ReserveAssetFilter,
+    XcmFungibleFeeHandler,
+};
 
 parameter_types! {
     pub RelayNetwork: Option<NetworkId> = Some(NetworkId::Rococo);
@@ -72,8 +73,9 @@ pub type LocationToAccountId = (
     SiblingParachainConvertsVia<polkadot_parachain::primitives::Sibling, AccountId>,
     // Straight up local `AccountId32` origins just alias directly to `AccountId`.
     AccountId32Aliases<RelayNetwork, AccountId>,
-    // Derives a private `Account32` by hashing `("multiloc", received multilocation)`
-    Account32Hash<RelayNetwork, AccountId>,
+    // Generates private `AccountId`s from `MultiLocation`s, in a stable & safe way.
+    // Replaces the old `Account32Hash` approach.
+    HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
 );
 
 /// Means for transacting the native currency on this chain.
@@ -135,9 +137,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
     // One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-    // The default POV size used by Polkadot/Kusama was 64 kB but that has been updated here: https://github.com/paritytech/polkadot/pull/7081
-    // We should properly benchmark instructions and get rid of fixed weights.
-    pub UnitWeightCost: Weight = Weight::from_parts(1_000_000_000, 1024);
+    // For the PoV size, we estimate 64 kB per instruction - which will is once again very conservative.
+    pub UnitWeightCost: Weight = Weight::from_parts(1_000_000_000, 64 * 1024);
     pub const MaxInstructions: u32 = 100;
 }
 
@@ -202,10 +203,6 @@ impl xcm_executor::Config for XcmConfig {
     type SafeCallFilter = Everything;
 }
 
-parameter_types! {
-    pub const MaxDownwardMessageWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(10);
-}
-
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
@@ -247,6 +244,7 @@ impl pallet_xcm::Config for Runtime {
     type WeightInfo = pallet_xcm::weights::SubstrateWeight<Runtime>;
     #[cfg(feature = "runtime-benchmarks")]
     type ReachableDest = ReachableDest;
+    type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -272,18 +270,6 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
     type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 }
 
-/// Convert `AccountId` to `MultiLocation`.
-pub struct AccountIdToMultiLocation;
-impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
-    fn convert(account: AccountId) -> MultiLocation {
-        X1(AccountId32 {
-            network: None,
-            id: account.into(),
-        })
-        .into()
-    }
-}
-
 parameter_types! {
     /// The absolute location in perspective of the whole network.
     pub ShibuyaLocationAbsolute: MultiLocation = MultiLocation {
@@ -303,23 +289,6 @@ pub struct AssetIdConvert;
 impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
     fn convert(asset_id: AssetId) -> Option<MultiLocation> {
         ShibuyaAssetLocationIdConverter::reverse_ref(&asset_id).ok()
-    }
-}
-
-/// `MultiAsset` reserve location provider. It's based on `RelativeReserveProvider` and in
-/// addition will convert self absolute location to relative location.
-pub struct AbsoluteAndRelativeReserveProvider<AbsoluteLocation>(PhantomData<AbsoluteLocation>);
-impl<AbsoluteLocation: Get<MultiLocation>> Reserve
-    for AbsoluteAndRelativeReserveProvider<AbsoluteLocation>
-{
-    fn reserve(asset: &MultiAsset) -> Option<MultiLocation> {
-        RelativeReserveProvider::reserve(asset).map(|reserve_location| {
-            if reserve_location == AbsoluteLocation::get() {
-                MultiLocation::here()
-            } else {
-                reserve_location
-            }
-        })
     }
 }
 

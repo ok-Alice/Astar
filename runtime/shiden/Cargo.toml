@@ -1,6 +1,6 @@
 [package]
 name = "shiden-runtime"
-version = "5.11.0"
+version = "5.18.1"
 build = "build.rs"
 authors.workspace = true
 edition.workspace = true
@@ -47,6 +47,7 @@ pallet-contracts = { workspace = true }
 pallet-contracts-primitives = { workspace = true }
 pallet-ethereum = { workspace = true }
 pallet-evm = { workspace = true }
+pallet-evm-precompile-batch = { workspace = true }
 pallet-evm-precompile-blake2 = { workspace = true }
 pallet-evm-precompile-bn128 = { workspace = true }
 pallet-evm-precompile-dispatch = { workspace = true }
@@ -59,7 +60,6 @@ pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-session = { workspace = true, features = ["historical"] }
-pallet-state-trie-migration = { workspace = true }
 pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
@@ -87,7 +87,6 @@ xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
 
 # orml dependencies
-orml-traits = { workspace = true }
 orml-xcm-support = { workspace = true }
 orml-xtokens = { workspace = true }
 
@@ -101,9 +100,9 @@ pallet-collective = { workspace = true, optional = true }
 frame-try-runtime = { workspace = true, optional = true }
 
 # Astar pallets
+astar-primitives = { workspace = true }
 pallet-block-reward = { workspace = true }
 pallet-collator-selection = { workspace = true }
-pallet-custom-signatures = { workspace = true }
 pallet-dapps-staking = { workspace = true }
 pallet-evm-precompile-assets-erc20 = { workspace = true }
 pallet-evm-precompile-dapps-staking = { workspace = true }
@@ -112,7 +111,6 @@ pallet-evm-precompile-substrate-ecdsa = { workspace = true }
 pallet-evm-precompile-xcm = { workspace = true }
 pallet-xc-asset-config = { workspace = true }
 pallet-xcm = { workspace = true }
-xcm-primitives = { workspace = true }
 
 # Moonbeam tracing
 moonbeam-evm-tracer = { workspace = true, optional = true }
@@ -153,7 +151,6 @@ std = [
 	"pallet-contracts/std",
 	"pallet-contracts-primitives/std",
 	"pallet-block-reward/std",
-	"pallet-custom-signatures/std",
 	"pallet-base-fee/std",
 	"pallet-ethereum/std",
 	"pallet-evm/std",
@@ -165,6 +162,7 @@ std = [
 	"pallet-evm-precompile-modexp/std",
 	"pallet-evm-precompile-sha3fips/std",
 	"pallet-dapps-staking/std",
+	"pallet-evm-precompile-batch/std",
 	"pallet-evm-precompile-dapps-staking/std",
 	"pallet-evm-precompile-sr25519/std",
 	"pallet-evm-precompile-assets-erc20/std",
@@ -174,7 +172,6 @@ std = [
 	"pallet-multisig/std",
 	"pallet-insecure-randomness-collective-flip/std",
 	"pallet-session/std",
-	"pallet-state-trie-migration/std",
 	"pallet-utility/std",
 	"pallet-proxy/std",
 	"pallet-timestamp/std",
@@ -207,11 +204,10 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"pallet-xc-asset-config/std",
-	"xcm-primitives/std",
 	"substrate-wasm-builder",
 	"orml-xtokens/std",
-	"orml-traits/std",
 	"orml-xcm-support/std",
+	"astar-primitives/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
@@ -230,6 +226,8 @@ runtime-benchmarks = [
 	"pallet-xc-asset-config/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
 	"polkadot-runtime/runtime-benchmarks",
+	"astar-primitives/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
 ]
 try-runtime = [
 	"fp-self-contained/try-runtime",
@@ -241,7 +239,6 @@ try-runtime = [
 	"pallet-aura/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-block-reward/try-runtime",
-	"pallet-custom-signatures/try-runtime",
 	"pallet-dapps-staking/try-runtime",
 	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
@@ -268,7 +265,6 @@ try-runtime = [
 	"parachain-info/try-runtime",
 	"pallet-base-fee/try-runtime",
 	"pallet-evm/try-runtime",
-	"pallet-state-trie-migration/try-runtime",
 	"orml-xtokens/try-runtime",
 ]
 evm-tracing = [

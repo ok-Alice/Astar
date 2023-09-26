@@ -1,6 +1,6 @@
 [package]
 name = "shibuya-runtime"
-version = "5.11.0"
+version = "5.18.1"
 build = "build.rs"
 authors.workspace = true
 edition.workspace = true
@@ -63,7 +63,6 @@ pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
-pallet-state-trie-migration = { workspace = true }
 pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
@@ -92,19 +91,20 @@ xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
 
 # orml dependencies
-orml-traits = { workspace = true }
 orml-xcm-support = { workspace = true }
 orml-xtokens = { workspace = true }
 
 # Astar pallets
+astar-primitives = { workspace = true }
 pallet-block-reward = { workspace = true }
 pallet-chain-extension-dapps-staking = { workspace = true }
 pallet-chain-extension-nomination-pools-staking = { workspace = true }
 pallet-chain-extension-xvm = { workspace = true }
 pallet-collator-selection = { workspace = true }
-pallet-custom-signatures = { workspace = true }
 pallet-dapps-staking = { workspace = true }
+pallet-ethereum-checked = { workspace = true }
 pallet-evm-precompile-assets-erc20 = { workspace = true }
+pallet-evm-precompile-batch = { workspace = true }
 pallet-evm-precompile-dapps-staking = { workspace = true }
 pallet-evm-precompile-sr25519 = { workspace = true }
 pallet-evm-precompile-substrate-ecdsa = { workspace = true }
@@ -113,8 +113,7 @@ pallet-evm-precompile-xvm = { workspace = true }
 pallet-nomination-pools-staking = { workspace = true }
 pallet-xc-asset-config = { workspace = true }
 pallet-xcm = { workspace = true }
-pallet-xvm = { workspace = true, features = ["evm", "wasm"] }
-xcm-primitives = { workspace = true }
+pallet-xvm = { workspace = true }
 
 # Moonbeam tracing
 moonbeam-evm-tracer = { workspace = true, optional = true }
@@ -169,7 +168,6 @@ std = [
 	"pallet-chain-extension-dapps-staking/std",
 	"pallet-chain-extension-nomination-pools-staking/std",
 	"pallet-chain-extension-xvm/std",
-	"pallet-custom-signatures/std",
 	"pallet-base-fee/std",
 	"pallet-ethereum/std",
 	"pallet-preimage/std",
@@ -183,6 +181,7 @@ std = [
 	"pallet-evm-precompile-modexp/std",
 	"pallet-evm-precompile-sha3fips/std",
 	"pallet-evm-precompile-dapps-staking/std",
+	"pallet-evm-precompile-batch/std",
 	"pallet-evm-precompile-sr25519/std",
 	"pallet-evm-precompile-substrate-ecdsa/std",
 	"pallet-evm-precompile-assets-erc20/std",
@@ -209,8 +208,8 @@ std = [
 	"pallet-xcm/std",
 	"pallet-xc-asset-config/std",
 	"pallet-xvm/std",
+	"pallet-ethereum-checked/std",
 	"pallet-scheduler/std",
-	"pallet-state-trie-migration/std",
 	"parachain-info/std",
 	"polkadot-parachain/std",
 	"polkadot-primitives/std",
@@ -232,12 +231,11 @@ std = [
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
-	"xcm-primitives/std",
 	"substrate-wasm-builder",
 	"pallet-chain-extension-assets/std",
 	"orml-xtokens/std",
-	"orml-traits/std",
 	"orml-xcm-support/std",
+	"astar-primitives/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
@@ -256,8 +254,12 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"pallet-preimage/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
+	"pallet-ethereum-checked/runtime-benchmarks",
+	"pallet-xvm/runtime-benchmarks",
 	"polkadot-runtime/runtime-benchmarks",
 	"orml-xtokens/runtime-benchmarks",
+	"astar-primitives/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
 ]
 try-runtime = [
 	"fp-self-contained/try-runtime",
@@ -269,7 +271,6 @@ try-runtime = [
 	"pallet-aura/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-block-reward/try-runtime",
-	"pallet-custom-signatures/try-runtime",
 	"pallet-dapps-staking/try-runtime",
 	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
@@ -303,7 +304,7 @@ try-runtime = [
 	"pallet-preimage/try-runtime",
 	"pallet-base-fee/try-runtime",
 	"pallet-evm/try-runtime",
-	"pallet-state-trie-migration/try-runtime",
+	"pallet-ethereum-checked/try-runtime",
 	"orml-xtokens/try-runtime",
 ]
 evm-tracing = [
