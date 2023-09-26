@@ -23,7 +23,6 @@ use frame_support::{
     pallet_prelude::*,
     traits::{Currency, Get, LockIdentifier, LockableCurrency, ReservableCurrency},
     weights::Weight,
-    PalletId,
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::StaticLookup;
@@ -78,59 +77,6 @@ pub mod pallet {
         /// Describes smart contract in the context required by dapps staking.
         type SmartContract: Default + Parameter + Member + MaxEncodedLen;
 
-        /// Number of blocks per era.
-        #[pallet::constant]
-        type BlockPerEra: Get<BlockNumberFor<Self>>;
-
-        /// Deposit that will be reserved as part of new contract registration.
-        #[pallet::constant]
-        type RegisterDeposit: Get<BalanceOf<Self>>;
-
-        /// Maximum number of unique stakers per contract.
-        #[pallet::constant]
-        type MaxNumberOfStakersPerContract: Get<u32>;
-
-        /// Minimum amount user must have staked on contract.
-        /// User can stake less if they already have the minimum staking amount staked on that particular contract.
-        #[pallet::constant]
-        type MinimumStakingAmount: Get<BalanceOf<Self>>;
-
-        /// Dapps staking pallet Id
-        #[pallet::constant]
-        type PalletId: Get<PalletId>;
-
-        /// Minimum amount that should be left on staker account after staking.
-        /// Serves as a safeguard to prevent users from locking their entire free balance.
-        #[pallet::constant]
-        type MinimumRemainingAmount: Get<BalanceOf<Self>>;
-
-        /// Max number of unlocking chunks per account Id <-> contract Id pairing.
-        /// If value is zero, unlocking becomes impossible.
-        #[pallet::constant]
-        type MaxUnlockingChunks: Get<u32>;
-
-        /// Number of eras that need to pass until unstaked value can be withdrawn.
-        /// Current era is always counted as full era (regardless how much blocks are remaining).
-        /// When set to `0`, it's equal to having no unbonding period.
-        #[pallet::constant]
-        type UnbondingPeriod: Get<u32>;
-
-        /// Max number of unique `EraStake` values that can exist for a `(staker, contract)` pairing.
-        /// When stakers claims rewards, they will either keep the number of `EraStake` values the same or they will reduce them by one.
-        /// Stakers cannot add an additional `EraStake` value by calling `bond&stake` or `unbond&unstake` if they've reached the max number of values.
-        ///
-        /// This ensures that history doesn't grow indefinitely - if there are too many chunks, stakers should first claim their former rewards
-        /// before adding additional `EraStake` values.
-        #[pallet::constant]
-        type MaxEraStakeValues: Get<u32>;
-
-        /// Number of eras that need to pass until dApp rewards for the unregistered contracts can be burned.
-        /// Developer can still claim rewards after this period has passed, iff it hasn't been burned yet.
-        ///
-        /// For example, if retention is set to `2` and current era is `10`, it means that all unclaimed rewards bellow era `8` can be burned.
-        #[pallet::constant]
-        type UnregisteredDappRewardRetention: Get<u32>;
-
         /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -156,70 +102,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// Disabled
         Disabled,
-        /// No change in maintenance mode
-        NoMaintenanceModeChange,
-        /// Upgrade is too heavy, reduce the weight parameter.
-        UpgradeTooHeavy,
-        /// Can not stake with zero value.
-        StakingWithNoValue,
-        /// Can not stake with value less than minimum staking value
-        InsufficientValue,
-        /// Number of stakers per contract exceeded.
-        MaxNumberOfStakersExceeded,
-        /// Targets must be operated contracts
-        NotOperatedContract,
-        /// Contract isn't staked.
-        NotStakedContract,
-        /// Contract isn't unregistered.
-        NotUnregisteredContract,
-        /// Unclaimed rewards should be claimed before withdrawing stake.
-        UnclaimedRewardsRemaining,
-        /// Unstaking a contract with zero value
-        UnstakingWithNoValue,
-        /// There are no previously unbonded funds that can be unstaked and withdrawn.
-        NothingToWithdraw,
-        /// The contract is already registered by other account
-        AlreadyRegisteredContract,
-        /// This account was already used to register contract
-        AlreadyUsedDeveloperAccount,
-        /// Smart contract not owned by the account id.
-        NotOwnedContract,
-        /// Report issue on github if this is ever emitted
-        UnknownEraReward,
-        /// Report issue on github if this is ever emitted
-        UnexpectedStakeInfoEra,
-        /// Contract has too many unlocking chunks. Withdraw the existing chunks if possible
-        /// or wait for current chunks to complete unlocking process to withdraw them.
-        TooManyUnlockingChunks,
-        /// Contract already claimed in this era and reward is distributed
-        AlreadyClaimedInThisEra,
-        /// Era parameter is out of bounds
-        EraOutOfBounds,
-        /// Too many active `EraStake` values for (staker, contract) pairing.
-        /// Claim existing rewards to fix this problem.
-        TooManyEraStakeValues,
-        /// Account is not actively staking
-        NotActiveStaker,
-        /// Transfering nomination to the same contract
-        NominationTransferToSameContract,
         /// Failed to send XCM transaction
         FailedXcmTransaction,
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_initialize(_now: BlockNumberFor<T>) -> Weight {
-            // As long as pallet is disabled, we shouldn't allow any storage modifications.
-            // This means we might prolong an era but it's acceptable.
-            // Runtime upgrade should be timed so we ensure that we complete it before
-            // a new era is triggered. This code is just a safety net to ensure nothing is broken
-            // if we fail to do that.
-            if PalletDisabled::<T>::get() {
-                return T::DbWeight::get().reads(1);
-            }
-
-            T::DbWeight::get().reads(1)
-        }
     }
 
     #[pallet::call]
@@ -258,16 +142,16 @@ pub mod pallet {
 
             let withdraw = 10_000_000_000u64;
             let messages = Xcm(vec![
-                WithdrawAsset((MultiLocation::parent(), withdraw).into()),
+                WithdrawAsset((Here, withdraw).into()),
                 BuyExecution {
-                    fees: (MultiLocation::parent(), withdraw).into(),
+                    fees: (Here, withdraw).into(),
                     weight_limit: WeightLimit::Unlimited,
                 },
-                Transact {
-                    origin_kind: SovereignAccount,
-                    require_weight_at_most: Weight::from_parts(10_000_000_000u64, 1024 * 1024),
-                    call: create_nomination_pool.encode().into(),
-                },
+                // Transact {
+                //     origin_kind: SovereignAccount,
+                //     require_weight_at_most: Weight::from_parts(10_000_000_000u64, 1024 * 1024),
+                //     call: create_nomination_pool.encode().into(),
+                // },
             ]);
 
             match pallet_xcm::Pallet::<T>::send_xcm(Here, MultiLocation::parent(), messages) {
@@ -280,6 +164,7 @@ pub mod pallet {
         }
     }
 }
+
 impl<T: Config> Pallet<T> {
     /// `Err` if pallet disabled for maintenance, `Ok` otherwise
     pub fn ensure_pallet_enabled() -> Result<(), Error<T>> {

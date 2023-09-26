@@ -512,25 +512,11 @@ impl pallet_collator_selection::Config for Runtime {
     type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-    pub const NominationPoolsStakingPalletId: PalletId = PalletId(*b"py/npstg");
-}
-
 impl pallet_nomination_pools_staking::Config for Runtime {
     type Currency = Balances;
-    type BlockPerEra = BlockPerEra;
     type SmartContract = SmartContract<AccountId>;
-    type RegisterDeposit = RegisterDeposit;
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_nomination_pools_staking::weights::SubstrateWeight<Runtime>;
-    type MaxNumberOfStakersPerContract = MaxNumberOfStakersPerContract;
-    type MinimumStakingAmount = MinimumStakingAmount;
-    type PalletId = NominationPoolsStakingPalletId;
-    type MaxUnlockingChunks = MaxUnlockingChunks;
-    type UnbondingPeriod = UnbondingPeriod;
-    type MinimumRemainingAmount = MinimumRemainingAmount;
-    type MaxEraStakeValues = MaxEraStakeValues;
-    type UnregisteredDappRewardRetention = ConstU32<10>;
 }
 
 parameter_types! {
