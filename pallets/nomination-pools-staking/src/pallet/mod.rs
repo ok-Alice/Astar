@@ -104,6 +104,8 @@ pub mod pallet {
         Disabled,
         /// Failed to send XCM transaction
         FailedXcmTransaction,
+        /// asdf
+        FailedToConvertBalance,
     }
 
     #[pallet::call]
@@ -140,11 +142,14 @@ pub mod pallet {
 
             // TODO add refund surplus on error. https://paritytech.github.io/xcm-docs/journey/fees/index.html#refundsurplus
 
-            let withdraw = 1_000u128;
+            // let withdraw = 501_000_000_000u128;
+            let value: u128 = value
+                .try_into()
+                .map_err(|_| Error::<T>::FailedToConvertBalance)?;
             let messages = Xcm(vec![
-                WithdrawAsset((Here, withdraw).into()),
+                WithdrawAsset((Here, value).into()),
                 BuyExecution {
-                    fees: (Here, withdraw).into(),
+                    fees: (Here, 1_000_000_000u128).into(),
                     weight_limit: WeightLimit::Unlimited,
                 },
                 // Transact {
