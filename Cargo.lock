@@ -7793,7 +7793,7 @@ dependencies = [
  "pallet-balances",
  "pallet-session",
  "pallet-timestamp",
- "pallet-xcm 0.9.39",
+ "pallet-xcm 0.9.40",
  "parity-scale-codec",
  "scale-info",
  "serde",

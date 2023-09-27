@@ -140,7 +140,7 @@ pub mod pallet {
 
             // TODO add refund surplus on error. https://paritytech.github.io/xcm-docs/journey/fees/index.html#refundsurplus
 
-            let withdraw = 10_000_000_000u64;
+            let withdraw = 1_000u128;
             let messages = Xcm(vec![
                 WithdrawAsset((Here, withdraw).into()),
                 BuyExecution {
