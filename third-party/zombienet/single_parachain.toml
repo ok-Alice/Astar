@@ -4,9 +4,9 @@ timeout = 1000
 # Used to start 4 validator nodes and 2 collator nodes for a single parachain.
 
 [relaychain]
-default_command = "./polkadot"
+default_command = "../polkadot/target/release/polkadot"
 default_args = [ "-l=parachain=debug,xcm=trace" ]
-chain = "rococo-local"
+chain = "kusama-local"
 
   [[relaychain.nodes]]
   name = "alice"
@@ -28,16 +28,16 @@ chain = "rococo-local"
 # Right now this has to be 2000 but soon we might be able to use arbitrary para-id
 id = 2000
 # Replace this with whichever chain you need to run, e.g. `astar-dev` if you need Astar
-chain = "shibuya-dev"
+chain = "shiden-dev"
 cumulus_based = true
 
   [[parachains.collators]]
   name = "collator1"
-  command = "./astar-collator"
+  command = "./target/release/astar-collator"
   args = [ "-l=xcm=trace", "--enable-evm-rpc" ]
   
 
   [[parachains.collators]]
   name = "collator2"
-  command = "./astar-collator"
+  command = "./target/release/astar-collator"
   args = [ "--enable-evm-rpc" ]

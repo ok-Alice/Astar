@@ -28,8 +28,8 @@ fp-evm = { workspace = true }
 pallet-evm = { workspace = true }
 
 # Polkadot
-xcm = { workspace = true }
-xcm-executor = { workspace = true }
+staging-xcm = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
@@ -43,7 +43,7 @@ precompile-utils = { workspace = true, features = ["testing"] }
 pallet-balances = { workspace = true }
 pallet-timestamp = { workspace = true }
 sp-runtime = { workspace = true }
-xcm-builder = { workspace = true, features = ["std"] }
+staging-xcm-builder = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]
@@ -60,7 +60,7 @@ std = [
 	"sp-core/std",
 	"sp-std/std",
 	"sp-io/std",
-	"xcm/std",
-	"xcm-executor/std",
+	"staging-xcm/std",
+	"staging-xcm-executor/std",
 ]
 runtime-benchmarks = []

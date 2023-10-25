@@ -27,9 +27,9 @@ sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
 # XCM dependencies
-xcm = { workspace = true }
-xcm-builder = { workspace = true }
-xcm-executor = { workspace = true }
+staging-xcm = { workspace = true }
+staging-xcm-builder = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
 # ORML dependencies
 orml-traits = { workspace = true }
@@ -55,9 +55,9 @@ std = [
 	"sp-runtime/std",
 	"sp-core/std",
 	"sp-io/std",
-	"xcm/std",
-	"xcm-builder/std",
-	"xcm-executor/std",
+	"staging-xcm/std",
+	"staging-xcm-builder/std",
+	"staging-xcm-executor/std",
 	"orml-traits/std",
 	"pallet-xc-asset-config/std",
 	"fp-evm/std",
@@ -65,4 +65,4 @@ std = [
 	"pallet-evm/std",
 	"pallet-evm-precompile-assets-erc20/std",
 ]
-runtime-benchmarks = ["xcm-builder/runtime-benchmarks", "pallet-assets/runtime-benchmarks"]
+runtime-benchmarks = ["staging-xcm-builder/runtime-benchmarks", "pallet-assets/runtime-benchmarks"]

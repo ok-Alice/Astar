@@ -20,8 +20,8 @@ sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-xcm = { workspace = true }
-xcm-executor = { workspace = true }
+staging-xcm = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
 frame-benchmarking = { workspace = true, optional = true }
 
@@ -30,7 +30,7 @@ pallet-balances = { workspace = true }
 polkadot-parachain = { workspace = true }
 polkadot-runtime-parachains = { workspace = true }
 
-xcm-builder = { workspace = true, features = ["std"] }
+staging-xcm-builder = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]
@@ -46,13 +46,13 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-support/std",
 	"frame-system/std",
-	"xcm/std",
-	"xcm-executor/std",
+	"staging-xcm/std",
+	"staging-xcm-executor/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"xcm-builder/runtime-benchmarks",
+	"staging-xcm-builder/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]

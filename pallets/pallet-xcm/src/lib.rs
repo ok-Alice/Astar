@@ -37,7 +37,8 @@ use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{
-        AccountIdConversion, BadOrigin, BlakeTwo256, BlockNumberProvider, Hash, Saturating, Zero,
+        AccountIdConversion, BadOrigin, BlakeTwo256, BlockNumberProvider, Dispatchable, Hash,
+        Saturating, Zero,
     },
     RuntimeDebug,
 };
@@ -46,10 +47,7 @@ use xcm::{latest::QueryResponseInfo, prelude::*};
 use xcm_executor::traits::{Convert, ConvertOrigin};
 
 use frame_support::{
-    dispatch::{Dispatchable, GetDispatchInfo},
-    pallet_prelude::*,
-    traits::WithdrawReasons,
-    PalletId,
+    dispatch::GetDispatchInfo, pallet_prelude::*, traits::WithdrawReasons, PalletId,
 };
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
@@ -138,8 +136,9 @@ impl WeightInfo for TestWeightInfo {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::traits::GenesisBuild;
     use frame_support::{
-        dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+        dispatch::{GetDispatchInfo, PostDispatchInfo},
         parameter_types,
     };
     use frame_system::Config as SysConfig;
@@ -168,7 +167,7 @@ pub mod pallet {
 
         /// A lockable currency.
         // TODO: We should really use a trait which can handle multiple currencies.
-        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+        type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>;
 
         /// The `MultiAsset` matcher for `Currency`.
         type CurrencyMatcher: MatchesFungible<BalanceOf<Self>>;
@@ -509,7 +508,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn query)]
     pub(super) type Queries<T: Config> =
-        StorageMap<_, Blake2_128Concat, QueryId, QueryStatus<T::BlockNumber>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, QueryId, QueryStatus<BlockNumberFor<T>>, OptionQuery>;
 
     /// The existing asset traps.
     ///
@@ -735,7 +734,7 @@ pub mod pallet {
 
             if on_chain_storage_version < 1 {
                 let mut count = 0;
-                Queries::<T>::translate::<QueryStatusV0<T::BlockNumber>, _>(|_key, value| {
+                Queries::<T>::translate::<QueryStatusV0<BlockNumberFor<T>>, _>(|_key, value| {
                     count += 1;
                     Some(value.into())
                 });
@@ -1675,7 +1674,7 @@ impl<T: Config> Pallet<T> {
     fn do_new_query(
         responder: impl Into<MultiLocation>,
         maybe_notify: Option<(u8, u8)>,
-        timeout: T::BlockNumber,
+        timeout: BlockNumberFor<T>,
         match_querier: impl Into<MultiLocation>,
     ) -> u64 {
         QueryCounter::<T>::mutate(|q| {
@@ -1711,7 +1710,7 @@ impl<T: Config> Pallet<T> {
     pub fn report_outcome(
         message: &mut Xcm<()>,
         responder: impl Into<MultiLocation>,
-        timeout: T::BlockNumber,
+        timeout: BlockNumberFor<T>,
     ) -> Result<QueryId, XcmError> {
         let responder = responder.into();
         let destination = T::UniversalLocation::get()
@@ -1754,7 +1753,7 @@ impl<T: Config> Pallet<T> {
         message: &mut Xcm<()>,
         responder: impl Into<MultiLocation>,
         notify: impl Into<<T as Config>::RuntimeCall>,
-        timeout: T::BlockNumber,
+        timeout: BlockNumberFor<T>,
     ) -> Result<(), XcmError> {
         let responder = responder.into();
         let destination = T::UniversalLocation::get()
@@ -1776,7 +1775,7 @@ impl<T: Config> Pallet<T> {
     /// Attempt to create a new query ID and register it as a query that is yet to respond.
     pub fn new_query(
         responder: impl Into<MultiLocation>,
-        timeout: T::BlockNumber,
+        timeout: BlockNumberFor<T>,
         match_querier: impl Into<MultiLocation>,
     ) -> u64 {
         Self::do_new_query(responder, None, timeout, match_querier)
@@ -1787,7 +1786,7 @@ impl<T: Config> Pallet<T> {
     pub fn new_notify_query(
         responder: impl Into<MultiLocation>,
         notify: impl Into<<T as Config>::RuntimeCall>,
-        timeout: T::BlockNumber,
+        timeout: BlockNumberFor<T>,
         match_querier: impl Into<MultiLocation>,
     ) -> u64 {
         let notify = notify
@@ -1802,7 +1801,7 @@ impl<T: Config> Pallet<T> {
     /// Attempt to remove and return the response of query with ID `query_id`.
     ///
     /// Returns `None` if the response is not (yet) available.
-    pub fn take_response(query_id: QueryId) -> Option<(Response, T::BlockNumber)> {
+    pub fn take_response(query_id: QueryId) -> Option<(Response, BlockNumberFor<T>)> {
         if let Some(QueryStatus::Ready { response, at }) = Queries::<T>::get(query_id) {
             let response = response.try_into().ok()?;
             Queries::<T>::remove(query_id);

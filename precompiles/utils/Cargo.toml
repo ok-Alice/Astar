@@ -37,7 +37,7 @@ fp-evm = { workspace = true }
 pallet-evm = { workspace = true }
 
 # Polkadot / XCM
-xcm = { workspace = true }
+staging-xcm = { workspace = true }
 
 assert_matches = { workspace = true }
 
@@ -57,7 +57,7 @@ std = [
 	"sp-io/std",
 	"sp-std/std",
 	"sp-runtime/std",
-	"xcm/std",
+	"staging-xcm/std",
 	"environmental/std",
 ]
 testing = ["similar-asserts", "std", "scale-info", "serde", "derive_more", "hex-literal"]

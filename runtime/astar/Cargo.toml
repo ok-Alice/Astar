@@ -80,9 +80,9 @@ parachain-info = { workspace = true }
 polkadot-parachain = { workspace = true }
 polkadot-primitives = { workspace = true }
 polkadot-runtime-common = { workspace = true }
-xcm = { workspace = true }
-xcm-builder = { workspace = true }
-xcm-executor = { workspace = true }
+staging-xcm = { workspace = true }
+staging-xcm-builder = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
 # orml dependencies
 orml-xcm-support = { workspace = true }
@@ -197,9 +197,9 @@ std = [
 	"moonbeam-evm-tracer/std",
 	"moonbeam-rpc-primitives-debug/std",
 	"moonbeam-rpc-primitives-txpool/std",
-	"xcm/std",
-	"xcm-builder/std",
-	"xcm-executor/std",
+	"staging-xcm/std",
+	"staging-xcm-builder/std",
+	"staging-xcm-executor/std",
 	"pallet-xc-asset-config/std",
 	"substrate-wasm-builder",
 	"orml-xtokens/std",
@@ -220,7 +220,7 @@ runtime-benchmarks = [
 	"pallet-dapps-staking/runtime-benchmarks",
 	"pallet-block-reward/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
-	"xcm-builder/runtime-benchmarks",
+	"staging-xcm-builder/runtime-benchmarks",
 	"pallet-xc-asset-config/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
 	"polkadot-runtime/runtime-benchmarks",

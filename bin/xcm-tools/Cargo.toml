@@ -20,9 +20,9 @@ polkadot-parachain = { workspace = true, features = ["std"] }
 polkadot-primitives = { workspace = true, features = ["std"] }
 sp-core = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
-xcm = { workspace = true, features = ["std"] }
-xcm-builder = { workspace = true, features = ["std"] }
-xcm-executor = { workspace = true, features = ["std"] }
+staging-xcm = { workspace = true, features = ["std"] }
+staging-xcm-builder = { workspace = true, features = ["std"] }
+staging-xcm-executor = { workspace = true, features = ["std"] }
 
 hex = { workspace = true }
 

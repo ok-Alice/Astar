@@ -45,9 +45,9 @@ pallet-xcm = { workspace = true }
 polkadot-core-primitives = { workspace = true }
 polkadot-parachain = { workspace = true }
 polkadot-runtime-parachains = { workspace = true }
-xcm = { workspace = true }
-xcm-builder = { workspace = true }
-xcm-executor = { workspace = true }
+staging-xcm = { workspace = true }
+staging-xcm-builder = { workspace = true }
+staging-xcm-executor = { workspace = true }
 xcm-simulator = { workspace = true }
 
 # ORML
@@ -90,8 +90,8 @@ runtime-benchmarks = [
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-contracts/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
-	"xcm-builder/runtime-benchmarks",
-	"xcm-executor/runtime-benchmarks",
+	"staging-xcm-builder/runtime-benchmarks",
+	"staging-xcm-executor/runtime-benchmarks",
 	"polkadot-runtime-parachains/runtime-benchmarks",
 	"polkadot-parachain/runtime-benchmarks",
 	"orml-xtokens/runtime-benchmarks",

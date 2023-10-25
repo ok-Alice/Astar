@@ -436,10 +436,11 @@ fn should_not_kick_mechanism_too_few() {
 #[test]
 #[should_panic = "duplicate invulnerables in genesis."]
 fn cannot_set_genesis_value_twice() {
+    use sp_runtime::BuildStorage;
+
     sp_tracing::try_init_simple();
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap();
+    let t = frame_system::GenesisConfig::default();
+    let mut t = <frame_system::GenesisConfig<Test> as BuildStorage>::build_storage(&t).unwrap();
     let invulnerables = vec![1, 1];
 
     let collator_selection = collator_selection::GenesisConfig::<Test> {
@@ -448,5 +449,5 @@ fn cannot_set_genesis_value_twice() {
         invulnerables,
     };
     // collator selection must be initialized before session.
-    collator_selection.assimilate_storage(&mut t).unwrap();
+    BuildStorage::assimilate_storage(&collator_selection, &mut t).unwrap();
 }
