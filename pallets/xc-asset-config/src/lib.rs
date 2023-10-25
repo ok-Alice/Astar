@@ -76,7 +76,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use parity_scale_codec::HasCompact;
     use sp_std::boxed::Box;
-    use xcm::{v3::MultiLocation, VersionedMultiLocation};
+    use staging_xcm::{v3::MultiLocation, VersionedMultiLocation};
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 

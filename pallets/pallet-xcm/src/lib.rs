@@ -35,6 +35,7 @@ use frame_support::traits::{
 };
 use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::traits::Convert;
 use sp_runtime::{
     traits::{
         AccountIdConversion, BadOrigin, BlakeTwo256, BlockNumberProvider, Dispatchable, Hash,
@@ -43,15 +44,15 @@ use sp_runtime::{
     RuntimeDebug,
 };
 use sp_std::{boxed::Box, marker::PhantomData, prelude::*, result::Result, vec};
-use xcm::{latest::QueryResponseInfo, prelude::*};
-use xcm_executor::traits::{Convert, ConvertOrigin};
+use staging_xcm::{latest::QueryResponseInfo, prelude::*};
+use staging_xcm_executor::traits::{ConvertOrigin, Properties};
 
 use frame_support::{
     dispatch::GetDispatchInfo, pallet_prelude::*, traits::WithdrawReasons, PalletId,
 };
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
-use xcm_executor::{
+use staging_xcm_executor::{
     traits::{
         CheckSuspension, ClaimAssets, DropAssets, MatchesFungible, OnResponse,
         VersionChangeNotifier, WeightBounds,
@@ -143,7 +144,7 @@ pub mod pallet {
     };
     use frame_system::Config as SysConfig;
     use sp_core::H256;
-    use xcm_executor::traits::{MatchesFungible, WeightBounds};
+    use staging_xcm_executor::traits::{MatchesFungible, WeightBounds};
 
     parameter_types! {
         /// An implementation of `Get<u32>` which just returns the latest XCM version which we can
@@ -255,7 +256,7 @@ pub mod pallet {
         /// Execution of an XCM message was attempted.
         ///
         /// \[ outcome \]
-        Attempted(xcm::latest::Outcome),
+        Attempted(staging_xcm::latest::Outcome),
         /// A XCM message was sent.
         ///
         /// \[ origin, destination, message \]
@@ -1851,9 +1852,9 @@ pub struct LockTicket<T: Config> {
     item_index: Option<usize>,
 }
 
-impl<T: Config> xcm_executor::traits::Enact for LockTicket<T> {
-    fn enact(self) -> Result<(), xcm_executor::traits::LockError> {
-        use xcm_executor::traits::LockError::UnexpectedState;
+impl<T: Config> staging_xcm_executor::traits::Enact for LockTicket<T> {
+    fn enact(self) -> Result<(), staging_xcm_executor::traits::LockError> {
+        use staging_xcm_executor::traits::LockError::UnexpectedState;
         let mut locks = LockedFungibles::<T>::get(&self.sovereign_account).unwrap_or_default();
         match self.item_index {
             Some(index) => {
@@ -1887,9 +1888,9 @@ pub struct UnlockTicket<T: Config> {
     unlocker: MultiLocation,
 }
 
-impl<T: Config> xcm_executor::traits::Enact for UnlockTicket<T> {
-    fn enact(self) -> Result<(), xcm_executor::traits::LockError> {
-        use xcm_executor::traits::LockError::UnexpectedState;
+impl<T: Config> staging_xcm_executor::traits::Enact for UnlockTicket<T> {
+    fn enact(self) -> Result<(), staging_xcm_executor::traits::LockError> {
+        use staging_xcm_executor::traits::LockError::UnexpectedState;
         let mut locks =
             LockedFungibles::<T>::get(&self.sovereign_account).ok_or(UnexpectedState)?;
         let mut maybe_remove_index = None;
@@ -1925,9 +1926,9 @@ pub struct ReduceTicket<T: Config> {
     owner: VersionedMultiLocation,
 }
 
-impl<T: Config> xcm_executor::traits::Enact for ReduceTicket<T> {
-    fn enact(self) -> Result<(), xcm_executor::traits::LockError> {
-        use xcm_executor::traits::LockError::UnexpectedState;
+impl<T: Config> staging_xcm_executor::traits::Enact for ReduceTicket<T> {
+    fn enact(self) -> Result<(), staging_xcm_executor::traits::LockError> {
+        use staging_xcm_executor::traits::LockError::UnexpectedState;
         let mut record = RemoteLockedFungibles::<T>::get(&self.key).ok_or(UnexpectedState)?;
         ensure!(
             self.locker == record.locker && self.owner == record.owner,
@@ -1947,7 +1948,7 @@ impl<T: Config> xcm_executor::traits::Enact for ReduceTicket<T> {
     }
 }
 
-impl<T: Config> xcm_executor::traits::AssetLock for Pallet<T> {
+impl<T: Config> staging_xcm_executor::traits::AssetLock for Pallet<T> {
     type LockTicket = LockTicket<T>;
     type UnlockTicket = UnlockTicket<T>;
     type ReduceTicket = ReduceTicket<T>;
@@ -1956,9 +1957,9 @@ impl<T: Config> xcm_executor::traits::AssetLock for Pallet<T> {
         unlocker: MultiLocation,
         asset: MultiAsset,
         owner: MultiLocation,
-    ) -> Result<LockTicket<T>, xcm_executor::traits::LockError> {
-        use xcm_executor::traits::LockError::*;
-        let sovereign_account = T::SovereignAccountOf::convert_ref(&owner).map_err(|_| BadOwner)?;
+    ) -> Result<LockTicket<T>, staging_xcm_executor::traits::LockError> {
+        use staging_xcm_executor::traits::LockError::*;
+        let sovereign_account = T::SovereignAccountOf::convert(owner);
         let amount = T::CurrencyMatcher::matches_fungible(&asset).ok_or(UnknownAsset)?;
         ensure!(
             T::Currency::free_balance(&sovereign_account) >= amount,
@@ -1984,9 +1985,9 @@ impl<T: Config> xcm_executor::traits::AssetLock for Pallet<T> {
         unlocker: MultiLocation,
         asset: MultiAsset,
         owner: MultiLocation,
-    ) -> Result<UnlockTicket<T>, xcm_executor::traits::LockError> {
-        use xcm_executor::traits::LockError::*;
-        let sovereign_account = T::SovereignAccountOf::convert_ref(&owner).map_err(|_| BadOwner)?;
+    ) -> Result<UnlockTicket<T>, staging_xcm_executor::traits::LockError> {
+        use staging_xcm_executor::traits::LockError::*;
+        let sovereign_account = T::SovereignAccountOf::convert(owner);
         let amount = T::CurrencyMatcher::matches_fungible(&asset).ok_or(UnknownAsset)?;
         ensure!(
             T::Currency::free_balance(&sovereign_account) >= amount,
@@ -2009,15 +2010,15 @@ impl<T: Config> xcm_executor::traits::AssetLock for Pallet<T> {
         locker: MultiLocation,
         asset: MultiAsset,
         mut owner: MultiLocation,
-    ) -> Result<(), xcm_executor::traits::LockError> {
-        use xcm_executor::traits::LockError::*;
+    ) -> Result<(), staging_xcm_executor::traits::LockError> {
+        use staging_xcm_executor::traits::LockError::*;
         ensure!(T::TrustedLockers::contains(&locker, &asset), NotTrusted);
         let amount = match asset.fun {
             Fungible(a) => a,
             NonFungible(_) => return Err(Unimplemented),
         };
         owner.remove_network_id();
-        let account = T::SovereignAccountOf::convert_ref(&owner).map_err(|_| BadOwner)?;
+        let account = T::SovereignAccountOf::convert(owner);
         let locker = locker.into();
         let owner = owner.into();
         let id: VersionedAssetId = asset.id.into();
@@ -2045,14 +2046,14 @@ impl<T: Config> xcm_executor::traits::AssetLock for Pallet<T> {
         locker: MultiLocation,
         asset: MultiAsset,
         mut owner: MultiLocation,
-    ) -> Result<Self::ReduceTicket, xcm_executor::traits::LockError> {
-        use xcm_executor::traits::LockError::*;
+    ) -> Result<Self::ReduceTicket, staging_xcm_executor::traits::LockError> {
+        use staging_xcm_executor::traits::LockError::*;
         let amount = match asset.fun {
             Fungible(a) => a,
             NonFungible(_) => return Err(Unimplemented),
         };
         owner.remove_network_id();
-        let sovereign_account = T::SovereignAccountOf::convert_ref(&owner).map_err(|_| BadOwner)?;
+        let sovereign_account = T::SovereignAccountOf::convert(owner);
         let locker = locker.into();
         let owner = owner.into();
         let id: VersionedAssetId = asset.id.into();
@@ -2375,7 +2376,7 @@ impl<T: Config> CheckSuspension for Pallet<T> {
         _origin: &MultiLocation,
         _instructions: &mut [Instruction<Call>],
         _max_weight: Weight,
-        _weight_credit: &mut Weight,
+        _weight_credit: &mut Properties,
     ) -> bool {
         XcmExecutionSuspended::<T>::get()
     }

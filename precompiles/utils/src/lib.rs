@@ -31,12 +31,13 @@ use fp_evm::{
     PrecompileOutput,
 };
 use frame_support::{
-    dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+    dispatch::{GetDispatchInfo, PostDispatchInfo},
     pallet_prelude::Weight,
     traits::Get,
 };
 use pallet_evm::{GasWeightMapping, Log};
 use sp_core::{H160, H256, U256};
+use sp_runtime::traits::Dispatchable;
 use sp_std::{marker::PhantomData, vec, vec::Vec};
 
 pub mod bytes;
@@ -186,7 +187,7 @@ where
         }
 
         // Make sure there is enough remaining weight
-        handle.record_external_cost(None, Some(weight.proof_size()))
+        handle.record_external_cost(None, Some(weight.proof_size()), None)
     }
 
     #[inline(always)]
@@ -246,7 +247,7 @@ where
 
 impl<Runtime> RuntimeHelper<Runtime>
 where
-    Runtime: pallet_evm::Config,
+    Runtime: pallet_evm::Config + frame_system::Config,
 {
     /// Cost of a Substrate DB write in gas.
     pub fn db_write_gas_cost() -> u64 {
@@ -450,7 +451,7 @@ impl<T: PrecompileHandle> PrecompileHandleExt for T {
         data_length: usize,
     ) -> Result<(), ExitError> {
         self.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
-        self.record_external_cost(None, Some(data_length as u64))
+        self.record_external_cost(None, Some(data_length as u64), None)
     }
 }
 

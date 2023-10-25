@@ -21,7 +21,7 @@ use frame_support::pallet_prelude::GetStorageVersion;
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::{pallet_prelude::*, traits::Get};
 use sp_std::{marker::PhantomData, vec::Vec};
-use xcm::IntoVersion;
+use staging_xcm::IntoVersion;
 
 pub struct MigrationXcmV3<T: Config>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for MigrationXcmV3<T> {
