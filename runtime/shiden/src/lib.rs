@@ -65,6 +65,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 
+pub use crate::precompiles::WhitelistedCalls;
 pub use astar_primitives::{
     evm::EvmRevertCodeHandler, xcm::AssetLocationIdConverter, AccountId, Address, AssetId, Balance,
     BlockNumber, Hash, Header, Index, Signature,
@@ -142,7 +143,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("shiden"),
     impl_name: create_runtime_str!("shiden"),
     authoring_version: 1,
-    spec_version: 106,
+    spec_version: 107,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,

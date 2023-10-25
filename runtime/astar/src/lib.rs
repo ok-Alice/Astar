@@ -22,6 +22,7 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
+pub use crate::precompiles::WhitelistedCalls;
 pub use astar_primitives::{
     evm::EvmRevertCodeHandler, xcm::AssetLocationIdConverter, AccountId, Address, AssetId, Balance,
     BlockNumber, Hash, Header, Index, Signature,
@@ -139,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("astar"),
     impl_name: create_runtime_str!("astar"),
     authoring_version: 1,
-    spec_version: 66,
+    spec_version: 67,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
