@@ -29,11 +29,11 @@ fp-evm = { workspace = true }
 pallet-evm = { workspace = true }
 
 # Polkadot
+orml-traits = { workspace = true }
 orml-xcm-support = { workspace = true }
 orml-xtokens = { workspace = true }
-staging-orml-traits = { workspace = true }
-staging-xcm = { workspace = true }
-staging-xcm-executor = { workspace = true }
+xcm = { workspace = true }
+xcm-executor = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
@@ -47,7 +47,7 @@ precompile-utils = { workspace = true, features = ["testing"] }
 pallet-balances = { workspace = true }
 pallet-timestamp = { workspace = true }
 sp-runtime = { workspace = true }
-staging-xcm-builder = { workspace = true, features = ["std"] }
+xcm-builder = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]
@@ -64,8 +64,8 @@ std = [
 	"sp-core/std",
 	"sp-std/std",
 	"sp-io/std",
-	"staging-xcm/std",
-	"staging-xcm-executor/std",
+	"xcm/std",
+	"xcm-executor/std",
 	"orml-xtokens/std",
 	"orml-xcm-support/std",
 	"orml-traits/std",
