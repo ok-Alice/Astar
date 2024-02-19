@@ -28,7 +28,7 @@
 //! ## Overview
 //!
 //! The Unified Accounts module provide functionality for native account holders to
-//! connect their evm address to have a unified experence across the different VMs.
+//! connect their evm address to have a unified experience across the different VMs.
 //! - Connect evm address you control
 //! - Connect default evm address
 //!
@@ -58,15 +58,12 @@
 //! * [`StaticLookup`](sp_runtime::traits::StaticLookup): Lookup implementations for accepting H160
 //! * [`AddressMapping`](pallet_evm::AddressMapping): Wrapper over `UnifiedAddressMapper` for evm address mapping
 //!   to account id.
-//! * [`AccountMapping`](astar_primitives::ethereum_checked::AccountMapping): Wrapper over `UnifiedAddressMapper`
-//!   for account id mappings to h160.
 //! * `KillAccountMapping`: [`OnKilledAccount`](frame_support::traits::OnKilledAccount) implementation to remove
 //!   the mappings from storage after account is reaped.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use astar_primitives::{
-    ethereum_checked::AccountMapping,
     evm::{EvmAddress, UnifiedAddressMapper},
     Balance,
 };
@@ -115,10 +112,8 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// The Currency for managing evm address assets
         type Currency: FungibleMutate<Self::AccountId, Balance = Balance>;
-        /// Default evm address to account id conversion
-        type DefaultEvmToNative: AddressMapping<Self::AccountId>;
-        /// Default account id to evm address conversion
-        type DefaultNativeToEvm: AccountMapping<Self::AccountId>;
+        /// Default address conversion
+        type DefaultMappings: UnifiedAddressMapper<Self::AccountId>;
         /// EVM chain id
         #[pallet::constant]
         type ChainId: Get<u64>;
@@ -139,6 +134,8 @@ pub mod pallet {
         UnexpectedSignatureFormat,
         /// The signature verification failed due to mismatch evm address
         InvalidSignature,
+        /// Funds unavailable to claim account
+        FundsUnavailable,
     }
 
     #[pallet::event]
@@ -205,7 +202,7 @@ pub mod pallet {
             Self::charge_storage_fee(&who)?;
 
             // Check if the default account id already exists for this evm address
-            let default_account_id = T::DefaultEvmToNative::into_account_id(evm_address.clone());
+            let default_account_id = T::DefaultMappings::to_default_account_id(&evm_address);
             if frame_system::Pallet::<T>::account_exists(&default_account_id) {
                 // Transfer all the free native balance from old account id to the newly
                 // since this `default_account_id` will no longer be connected to evm address
@@ -253,7 +250,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::AlreadyMapped
         );
         // get the default evm address
-        let evm_address = T::DefaultNativeToEvm::into_h160(account_id.clone());
+        let evm_address = T::DefaultMappings::to_default_h160(&account_id);
         // make sure default address is not already mapped, this should not
         // happen but for sanity check.
         ensure!(
@@ -274,8 +271,12 @@ impl<T: Config> Pallet<T> {
         Ok(evm_address)
     }
 
-    /// Charge the (exact) storage fee (polietly) from the user and burn it
+    /// Charge the (exact) storage fee (politely) from the user and burn it
+    /// while preserving the account from being reaped.
     fn charge_storage_fee(who: &T::AccountId) -> Result<Balance, DispatchError> {
+        let balance = T::Currency::reducible_balance(who, Preserve, Polite);
+        let fee = T::AccountMappingStorageFee::get();
+        ensure!(balance >= fee, Error::<T>::FundsUnavailable);
         T::Currency::burn_from(who, T::AccountMappingStorageFee::get(), Exact, Polite)
     }
 }
@@ -351,37 +352,16 @@ impl<T: Config> UnifiedAddressMapper<T::AccountId> for Pallet<T> {
         EvmToNative::<T>::get(evm_address)
     }
 
-    fn to_account_id_or_default(evm_address: &EvmAddress) -> T::AccountId {
-        EvmToNative::<T>::get(evm_address).unwrap_or_else(|| {
-            // fallback to default account_id
-            T::DefaultEvmToNative::into_account_id(evm_address.clone())
-        })
-    }
-
     fn to_default_account_id(evm_address: &EvmAddress) -> T::AccountId {
-        T::DefaultEvmToNative::into_account_id(evm_address.clone())
+        T::DefaultMappings::to_default_account_id(evm_address)
     }
 
     fn to_h160(account_id: &T::AccountId) -> Option<EvmAddress> {
         NativeToEvm::<T>::get(account_id)
     }
 
-    fn to_h160_or_default(account_id: &T::AccountId) -> EvmAddress {
-        NativeToEvm::<T>::get(account_id).unwrap_or_else(|| {
-            // fallback to default account_id
-            T::DefaultNativeToEvm::into_h160(account_id.clone())
-        })
-    }
-
     fn to_default_h160(account_id: &T::AccountId) -> EvmAddress {
-        T::DefaultNativeToEvm::into_h160(account_id.clone())
-    }
-}
-
-/// AccountMapping wrapper implementation
-impl<T: Config> AccountMapping<T::AccountId> for Pallet<T> {
-    fn into_h160(account: T::AccountId) -> H160 {
-        <Self as UnifiedAddressMapper<T::AccountId>>::to_h160_or_default(&account)
+        T::DefaultMappings::to_default_h160(account_id)
     }
 }
 
@@ -389,10 +369,11 @@ impl<T: Config> AccountMapping<T::AccountId> for Pallet<T> {
 impl<T: Config> AddressMapping<T::AccountId> for Pallet<T> {
     fn into_account_id(evm_address: H160) -> T::AccountId {
         <Self as UnifiedAddressMapper<T::AccountId>>::to_account_id_or_default(&evm_address)
+            .into_address()
     }
 }
 
-/// OnKilledAccout hooks implementation for removing storage mapping
+/// OnKilledAccount hooks implementation for removing storage mapping
 /// for killed accounts
 pub struct KillAccountMapping<T>(PhantomData<T>);
 impl<T: Config> OnKilledAccount<T::AccountId> for KillAccountMapping<T> {
@@ -415,7 +396,8 @@ impl<T: Config> StaticLookup for Pallet<T> {
             MultiAddress::Address20(i) => Ok(
                 <Self as UnifiedAddressMapper<T::AccountId>>::to_account_id_or_default(
                     &EvmAddress::from_slice(&i),
-                ),
+                )
+                .into_address(),
             ),
             _ => Err(LookupError),
         }

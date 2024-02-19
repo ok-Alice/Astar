@@ -53,6 +53,7 @@ use pallet_xc_asset_config::{ExecutionPaymentRate, XcAssetLocation};
 mod tests;
 
 pub const XCM_SIZE_LIMIT: u32 = 2u32.pow(16);
+pub const MAX_ASSETS: u32 = 64;
 
 /// Used to convert between cross-chain asset multilocation and local asset Id.
 ///
@@ -344,11 +345,22 @@ impl DescribeLocation for DescribeAccountKey20Terminal {
 
 pub type DescribeAccountIdTerminal = (DescribeAccountId32Terminal, DescribeAccountKey20Terminal);
 
+pub struct DescribeBodyTerminal;
+impl DescribeLocation for DescribeBodyTerminal {
+    fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+        match (l.parents, &l.interior) {
+            (0, X1(Plurality { id, part })) => Some((b"Body", id, part).encode()),
+            _ => return None,
+        }
+    }
+}
+
 pub type DescribeAllTerminal = (
     DescribeTerminus,
     DescribePalletTerminal,
     DescribeAccountId32Terminal,
     DescribeAccountKey20Terminal,
+    DescribeBodyTerminal,
 );
 
 pub struct DescribeFamily<DescribeInterior>(PhantomData<DescribeInterior>);

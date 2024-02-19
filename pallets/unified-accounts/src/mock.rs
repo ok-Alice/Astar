@@ -20,15 +20,15 @@
 
 use super::*;
 use crate as pallet_unified_accounts;
-use astar_primitives::ethereum_checked::HashedAccountMapping;
+use astar_primitives::evm::HashedDefaultMappings;
 use frame_support::{
     construct_runtime, parameter_types,
     sp_io::TestExternalities,
-    traits::{ConstU128, ConstU64, FindAuthor},
+    traits::{ConstU64, FindAuthor},
     weights::Weight,
 };
 use pallet_ethereum::PostLogContent;
-use pallet_evm::{FeeCalculator, HashedAddressMapping};
+use pallet_evm::FeeCalculator;
 use sp_core::{keccak_256, H160, H256, U256};
 use sp_runtime::{
     testing::Header,
@@ -39,6 +39,7 @@ use sp_runtime::{
 parameter_types! {
     pub BlockWeights: frame_system::limits::BlockWeights =
         frame_system::limits::BlockWeights::simple_max(Weight::from_parts(1024, 0));
+    pub const ExistentialDeposit: u128 = 100;
 }
 
 impl frame_system::Config for TestRuntime {
@@ -75,7 +76,7 @@ impl pallet_balances::Config for TestRuntime {
     type Balance = Balance;
     type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
-    type ExistentialDeposit = ConstU128<2>;
+    type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
     type HoldIdentifier = ();
@@ -155,8 +156,7 @@ parameter_types! {
 impl pallet_unified_accounts::Config for TestRuntime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
-    type DefaultEvmToNative = HashedAddressMapping<BlakeTwo256>;
-    type DefaultNativeToEvm = HashedAccountMapping<BlakeTwo256>;
+    type DefaultMappings = HashedDefaultMappings<BlakeTwo256>;
     type ChainId = ChainId;
     type AccountMappingStorageFee = AccountMappingStorageFee;
     type WeightInfo = ();

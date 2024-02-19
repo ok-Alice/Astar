@@ -145,7 +145,7 @@ fn account_claim_should_work() {
         let alice_eth = UnifiedAccounts::eth_address(&alice_secret());
         // default ss58 account associated with eth address
         let alice_eth_old_account =
-            <TestRuntime as Config>::DefaultEvmToNative::into_account_id(alice_eth.clone());
+            <TestRuntime as Config>::DefaultMappings::to_default_account_id(&alice_eth);
         let signature = get_evm_signature(&ALICE, &alice_secret());
 
         // transfer some funds to alice_eth (H160)
@@ -194,8 +194,7 @@ fn account_claim_should_work() {
 #[test]
 fn account_default_claim_works() {
     ExtBuilder::default().build().execute_with(|| {
-        let alice_default_evm =
-            <TestRuntime as Config>::DefaultNativeToEvm::into_h160(ALICE.into());
+        let alice_default_evm = <TestRuntime as Config>::DefaultMappings::to_default_h160(&ALICE);
 
         // claim default account
         assert_ok!(UnifiedAccounts::claim_default_evm_address(
@@ -346,6 +345,55 @@ fn connecting_mapped_accounts_should_not_work() {
                 get_evm_signature(&ALICE, &alice_secret())
             ),
             Error::<TestRuntime>::AlreadyMapped
+        );
+    });
+}
+
+#[test]
+fn charging_storage_fee_should_not_reap_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        let alice_eth = UnifiedAccounts::eth_address(&alice_secret());
+        let alice_signature = get_evm_signature(&ALICE, &alice_secret());
+
+        // set alice balance just enough to claim accounts without being reaped
+        Balances::set_balance(
+            &ALICE,
+            ExistentialDeposit::get() + AccountMappingStorageFee::get(),
+        );
+
+        //
+        // With sufficent funds, claim should succeed
+        //
+        assert_ok!(UnifiedAccounts::claim_evm_address(
+            RuntimeOrigin::signed(ALICE),
+            alice_eth,
+            alice_signature
+        ));
+        // check for claimed event
+        System::assert_last_event(RuntimeEvent::UnifiedAccounts(
+            crate::Event::AccountClaimed {
+                account_id: ALICE.clone(),
+                evm_address: alice_eth,
+            },
+        ));
+
+        // confirm the balance, should be equal to ED
+        assert_eq!(Balances::total_balance(&ALICE), ExistentialDeposit::get());
+
+        // clear mappings
+        EvmToNative::<TestRuntime>::remove(alice_eth);
+        NativeToEvm::<TestRuntime>::remove(ALICE);
+
+        //
+        // When funds are less than required, should fail with funds unavailable
+        //
+        assert_noop!(
+            UnifiedAccounts::claim_evm_address(
+                RuntimeOrigin::signed(ALICE),
+                alice_eth,
+                alice_signature
+            ),
+            Error::<TestRuntime>::FundsUnavailable
         );
     });
 }

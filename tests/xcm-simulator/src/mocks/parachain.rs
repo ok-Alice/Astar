@@ -23,8 +23,8 @@ use frame_support::{
     dispatch::DispatchClass,
     match_types, parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU128, ConstU32, ConstU64, Contains, Currency, Everything,
-        Imbalance, InstanceFilter, Nothing, OnUnbalanced,
+        AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU64, Contains, Currency,
+        Everything, Imbalance, InstanceFilter, Nothing, OnUnbalanced,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -37,7 +37,7 @@ use frame_system::{
     EnsureRoot, EnsureSigned,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sp_core::{ConstBool, H256};
+use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, Convert, Get, IdentityLookup},
@@ -172,7 +172,7 @@ impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 /// Constant values used within the runtime.
 pub const MICROSDN: Balance = 1_000_000_000_000;
 pub const MILLISDN: Balance = 1_000 * MICROSDN;
-/// We assume that ~10% of the block weight is consumed by `on_initalize` handlers.
+/// We assume that ~10% of the block weight is consumed by `on_initialize` handlers.
 /// This is used to limit the maximal weight of a single extrinsic.
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
@@ -311,6 +311,8 @@ impl pallet_dapps_staking::Config for Runtime {
     type UnbondingPeriod = ConstU32<2>;
     type MaxEraStakeValues = ConstU32<4>;
     type UnregisteredDappRewardRetention = ConstU32<7>;
+    type ForcePalletDisabled = ConstBool<false>;
+    type DelegateClaimFee = ConstU128<1>;
 }
 
 /// The type used to represent the kinds of proxying allowed.

@@ -35,6 +35,15 @@ pub mod evm;
 /// Precompiles
 pub mod precompiles;
 
+/// dApp staking & inflation primitives.
+pub mod dapp_staking;
+
+/// Useful primitives for testing.
+pub mod testing;
+
+/// Oracle & price primitives.
+pub mod oracle;
+
 /// Benchmark primitives
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarks;
