@@ -29,7 +29,7 @@ use frame_support::{
     parameter_types,
     traits::{
         AsEnsureOriginWithArg, ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly,
-        FindAuthor, Get, Imbalance, InstanceFilter, Nothing, OnFinalize, OnUnbalanced,
+        FindAuthor, Get, Imbalance, InstanceFilter, Everything, OnFinalize, OnUnbalanced,
         WithdrawReasons,
     },
     weights::{
@@ -685,7 +685,7 @@ impl pallet_contracts::Config for Runtime {
     /// and make sure they are stable. Dispatchables exposed to contracts are not allowed to
     /// change because that would break already deployed contracts. The `Call` structure itself
     /// is not allowed to change the indices of existing pallets, too.
-    type CallFilter = Nothing;
+    type CallFilter = Everything;
     type DepositPerItem = DepositPerItem;
     type DepositPerByte = DepositPerByte;
     type DefaultDepositLimit = DefaultDepositLimit;
